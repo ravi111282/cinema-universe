@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cinema Universe — Movie Plot Map</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #07090f;
+  --surface: #0d1219;
+  --card:    #111827;
+  --border:  #1c2b3a;
+  --accent:  #e8c96d;
+  --teal:    #5de8c0;
+  --text:    #c4d4e8;
+  --muted:   #3d5470;
+  --danger:  #e06060;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOP BAR ─────────────────────────────────────────────── */
+#topbar {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 20;
+  padding: 0 16px 0 0;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  padding: 0 18px;
+  border-right: 1px solid var(--border);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.logo span { color: var(--teal); }
+
+.tstat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 14px;
+  border-right: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.3;
+  flex-shrink: 0;
+  height: 100%;
+}
+.tstat strong { color: var(--text); font-size: 13px; display: block; }
+
+.search-wrap {
+  position: relative;
+  margin-left: 14px;
+  flex-shrink: 0;
+}
+.search-wrap svg {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  opacity: .4;
+  pointer-events: none;
+}
+#search {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px 6px 32px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  width: 200px;
+  transition: border-color .2s, width .3s;
+}
+#search:focus { border-color: var(--accent); width: 240px; }
+
+.spacer { flex: 1; }
+
+.tb-btn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.tb-btn:hover { background: var(--border); color: var(--text); }
+.tb-btn.on { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+.tb-btn.danger { border-color: var(--danger); color: var(--danger); }
+.tb-btn.danger:hover { background: var(--danger); color: #fff; }
+
+/* ── BODY ────────────────────────────────────────────────── */
+#body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── FILTER PANEL ───────────────────────────────────────── */
+#fp {
+  width: 224px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width .26s ease;
+}
+#fp.collapsed { width: 0; }
+
+.fp-head {
+  padding: 13px 15px 10px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 12px; letter-spacing: 2px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; white-space: nowrap;
+}
+
+.fp-sec {
+  padding: 11px 14px 9px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.fp-lbl {
+  font-size: 10px; letter-spacing: 1.4px;
+  color: var(--muted); text-transform: uppercase;
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 7px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.fp-lbl-action {
+  color: var(--teal); cursor: pointer; font-size: 9px;
+  letter-spacing: .5px;
+}
+
+.fp-sel {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 9px;
+  border-radius: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  outline: none; cursor: pointer;
+  transition: border-color .18s;
+}
+.fp-sel:focus { border-color: var(--accent); }
+.fp-sel option { background: var(--card); }
+
+.yr-row {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 5px;
+}
+.yr-lbl {
+  font-size: 10px; color: var(--muted);
+  font-family: 'DM Mono', monospace; width: 26px; flex-shrink: 0;
+}
+.yr-row input[type=range] {
+  flex: 1; accent-color: var(--accent); cursor: pointer;
+}
+.yr-val {
+  font-size: 11px; color: var(--text);
+  font-family: 'DM Mono', monospace;
+  width: 36px; text-align: right; flex-shrink: 0;
+}
+
+/* origin chips */
+.chips-wrap {
+  flex: 1; overflow-y: auto; padding: 8px 12px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.chip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 5px; border-radius: 5px;
+  cursor: pointer; transition: background .12s; user-select: none;
+}
+.chip:hover { background: rgba(255,255,255,.04); }
+.chip.off { opacity: .25; }
+.chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.chip-name { font-size: 12px; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-cnt  { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; flex-shrink: 0; }
+
+/* ── CHART ───────────────────────────────────────────────── */
+#chart-wrap { flex: 1; position: relative; overflow: hidden; min-width: 0; min-height: 0; }
+#plotly-chart { width: 100%; height: 100%; position: absolute; inset: 0; }
+
+/* ── DETAIL CARD ─────────────────────────────────────────── */
+#detail {
+  position: absolute; left: 14px; bottom: 14px; width: 310px;
+  background: rgba(10,16,26,.97);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 15px 17px 13px;
+  backdrop-filter: blur(14px);
+  display: none; z-index: 50;
+  box-shadow: 0 10px 44px rgba(0,0,0,.7);
+}
+#detail.show { display: block; }
+#d-close {
+  position: absolute; top: 10px; right: 12px;
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 17px; line-height: 1; transition: color .15s;
+}
+#d-close:hover { color: var(--text); }
+#d-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: 20px;
+  letter-spacing: 1px; color: var(--accent);
+  padding-right: 20px; margin-bottom: 7px; line-height: 1.15;
+}
+.d-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
+.d-tag {
+  padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  border: 1px solid currentColor; opacity: .85;
+}
+.d-row { margin-bottom: 6px; }
+.d-lbl { font-size: 10px; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 2px; }
+.d-val  { font-size: 12px; color: var(--text); line-height: 1.45; }
+.d-plot { font-size: 12px; color: #7a9ab8; line-height: 1.55; font-style: italic; }
+#d-wiki {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 9px;
+  font-size: 11px; color: var(--teal); text-decoration: none;
+  font-family: 'DM Mono', monospace; transition: opacity .15s;
+}
+#d-wiki:hover { opacity: .6; }
+
+/* ── MOVIE LIST ──────────────────────────────────────────── */
+#lp {
+  width: 280px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  flex-shrink: 0; overflow: hidden;
+  transition: width .26s ease;
+}
+#lp.collapsed { width: 0; }
+.lp-head {
+  padding: 12px 15px 10px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Bebas Neue', sans-serif; font-size: 12px; letter-spacing: 2px;
+  color: var(--accent);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lp-cnt { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); font-weight: 400; }
+.lp-scroll { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.mcard {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.mcard:hover { background: rgba(232,201,109,.04); }
+.mc-title { font-weight: 500; font-size: 13px; color: #dde8f8; margin-bottom: 2px; line-height: 1.25; }
+.mc-badge {
+  display: inline-block; padding: 1px 5px; border-radius: 3px;
+  font-size: 9px; font-weight: 600; letter-spacing: .3px; margin-left: 4px; vertical-align: middle;
+}
+.mc-meta { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 3px; }
+.mc-plot {
+  font-size: 11px; color: #5a7a95; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.lp-more { padding: 10px 14px; text-align: center; font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* ── DROP / LOAD ─────────────────────────────────────────── */
+#dropzone, #loading {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9999; gap: 18px;
+}
+#loading { display: none; }
+.drop-box {
+  border: 2px dashed var(--border); border-radius: 14px;
+  padding: 50px 68px; text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.drop-box:hover, .drop-box.over { border-color: var(--accent); background: rgba(232,201,109,.04); }
+.drop-icon { font-size: 42px; margin-bottom: 14px; }
+.drop-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--accent); margin-bottom: 6px; }
+.drop-sub { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 18px; line-height: 1.65; }
+#file-input { display: none; }
+.ld-title { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 6px; color: var(--accent); }
+.ld-msg   { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+.ld-bar-wrap { width: 280px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.ld-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--teal)); animation: sh 1.6s ease-in-out infinite; }
+@keyframes sh { 0%{width:0%;margin-left:0%} 50%{width:55%;margin-left:22%} 100%{width:0%;margin-left:100%} }
+</style>
+</head>
+<body>
+
+<!-- DROP ZONE -->
+<div id="dropzone">
+  <div class="drop-box" id="drop-box" onclick="document.getElementById('file-input').click()">
+    <div class="drop-icon">🎬</div>
+    <div class="drop-title">Cinema Universe</div>
+    <div class="drop-sub">Drop <code>movie_plots_2d.csv</code> here or click to browse<br>
+    Needs: Title, Release Year, Origin, Genre, Director, Generic_Plot, x, y</div>
+    <button class="tb-btn on" style="pointer-events:none;margin:0 auto">Load CSV</button>
+  </div>
+  <input type="file" id="file-input" accept=".csv">
+</div>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="ld-title">Cinema Universe</div>
+  <div class="ld-msg" id="ld-msg">Reading file…</div>
+  <div class="ld-bar-wrap"><div class="ld-bar"></div></div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;height:100vh;">
+
+  <div id="topbar">
+    <div class="logo">Cinema<span>Universe</span></div>
+    <div class="tstat"><strong id="s-total">—</strong>movies</div>
+    <div class="tstat"><strong id="s-origins">—</strong>origins</div>
+    <div class="tstat"><strong id="s-visible">—</strong>visible</div>
+    <div class="tstat"><strong id="s-years">—</strong>years</div>
+
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search" placeholder="Search title, genre, plot…" oninput="applyFilters()">
+    </div>
+
+    <div class="spacer"></div>
+
+    <button class="tb-btn on"     id="btn-fp" onclick="toggleFP()">⚙ Filters</button>
+    <button class="tb-btn on"     id="btn-lp" onclick="toggleLP()">☰ List</button>
+    <button class="tb-btn danger"             onclick="resetAll()">↺ Reset</button>
+  </div>
+
+  <div id="body">
+
+    <!-- FILTER PANEL -->
+    <div id="fp">
+      <div class="fp-head">FILTERS</div>
+
+      <div class="fp-sec">
+        <div class="fp-lbl">Genre</div>
+        <select class="fp-sel" id="genre-filter" onchange="applyFilters()">
+          <option value="">All Genres</option>
+        </select>
+      </div>
+
+      <div class="fp-sec">
+        <div class="fp-lbl">Year Range</div>
+        <div class="yr-row">
+          <span class="yr-lbl">From</span>
+          <input type="range" id="year-min" oninput="onYearChange()">
+          <span class="yr-val" id="ymin-lbl">—</span>
+        </div>
+        <div class="yr-row">
+          <span class="yr-lbl">To</span>
+          <input type="range" id="year-max" oninput="onYearChange()">
+          <span class="yr-val" id="ymax-lbl">—</span>
+        </div>
+      </div>
+
+      <div class="fp-sec" style="border-bottom:none;padding-bottom:4px;">
+        <div class="fp-lbl">
+          Origin
+          <span class="fp-lbl-action" onclick="toggleAllOrigins()" id="tog-all-lbl">hide all</span>
+        </div>
+      </div>
+      <div class="chips-wrap" id="chips"></div>
+    </div>
+
+    <!-- CHART -->
+    <div id="chart-wrap">
+      <div id="plotly-chart"></div>
+
+      <div id="detail">
+        <button id="d-close" onclick="closeDetail()">×</button>
+        <div id="d-title"></div>
+        <div class="d-tags" id="d-tags"></div>
+        <div class="d-row"><div class="d-lbl">Director</div><div class="d-val" id="d-dir"></div></div>
+        <div class="d-row"><div class="d-lbl">Cast</div><div class="d-val" id="d-cast"></div></div>
+        <div class="d-row"><div class="d-lbl">Generic Plot</div><div class="d-plot" id="d-plot"></div></div>
+        <a id="d-wiki" href="#" target="_blank">↗ Wikipedia</a>
+      </div>
+    </div>
+
+    <!-- MOVIE LIST -->
+    <div id="lp">
+      <div class="lp-head">MOVIES <span class="lp-cnt" id="lp-cnt">0</span></div>
+      <div class="lp-scroll" id="lp-scroll"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PAL = [
+  '#e8c96d','#5de8c0','#e87a6d','#6aaef0','#c97de8',
+  '#e8a96d','#6de8a0','#e86dab','#6dcfe8','#d4e86d',
+  '#a5e86d','#6d7de8','#e8b96d','#6de8b8','#e8736d',
+  '#73e86d','#e86db8','#6db8e8','#e8d46d','#6de89a',
+  '#d06de8','#6d9ce8','#e8956d','#95e86d','#e86d95',
+  '#6dcae8','#e8ca6d','#6de8ce','#ca6de8','#6de8a8'
+];
+
+let allData=[], filteredIdx=[];
+let originColors={}, originCounts={};
+let hiddenOrigins=new Set();
+let yearMin, yearMax, allHidden=false;
+
+// ── CSV ───────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const hdr = splitLine(lines[0]);
+  const rows = [];
+  for (let i=1;i<lines.length;i++) {
+    if (!lines[i].trim()) continue;
+    const v = splitLine(lines[i]);
+    const r = {};
+    hdr.forEach((h,j) => r[h.trim()] = (v[j]||'').trim());
+    rows.push(r);
+  }
+  return rows;
+}
+function splitLine(l) {
+  const out=[]; let cur=''; let q=false;
+  for (const c of l) {
+    if (c==='"'){q=!q;continue;}
+    if (c===','&&!q){out.push(cur);cur='';continue;}
+    cur+=c;
+  }
+  out.push(cur); return out;
+}
+
+// ── File load ─────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+const db = document.getElementById('drop-box');
+db.addEventListener('dragover',  e=>{e.preventDefault();db.classList.add('over');});
+db.addEventListener('dragleave', ()=>db.classList.remove('over'));
+db.addEventListener('drop', e=>{
+  e.preventDefault(); db.classList.remove('over');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+function loadFile(f) {
+  document.getElementById('dropzone').style.display='none';
+  document.getElementById('loading').style.display='flex';
+  const r=new FileReader();
+  r.onload=e=>{
+    document.getElementById('ld-msg').textContent='Parsing CSV…';
+    setTimeout(()=>{
+      try { initApp(parseCSV(e.target.result)); }
+      catch(err){ alert('Error: '+err.message); location.reload(); }
+    },80);
+  };
+  r.readAsText(f);
+}
+
+// ── Clean origin: only accept real text, no junk ──────────────
+function cleanOrigin(raw) {
+  const s = String(raw||'').split(',')[0].trim();
+  const cap = s.charAt(0).toUpperCase() + s.slice(1);
+  // Reject: empty, numeric start, too long, nan, bare single letters, URLs
+  if (!cap || /^\d/.test(cap) || cap.length>50 || cap.length<2 ||
+      cap.toLowerCase()==='nan' || cap.toLowerCase()==='none' ||
+      cap.toLowerCase()==='unknown origin' || /^https?:/i.test(cap)) {
+    return 'Unknown';
+  }
+  return cap;
+}
+
+// ── Init ──────────────────────────────────────────────────────
+function initApp(rows) {
+  document.getElementById('ld-msg').textContent=`Processing ${rows.length.toLocaleString()} rows…`;
+
+  allData = rows
+    .filter(r => !isNaN(parseFloat(r['x'])) && !isNaN(parseFloat(r['y'])))
+    .map((r,i) => ({
+      i,
+      title:    r['Title']||'Untitled',
+      year:     parseInt(r['Release Year'])||null,
+      origin:   cleanOrigin(r['Origin']),
+      director: r['Director']||'—',
+      cast:     (r['Cast']||'').substring(0,120),
+      genre:    ((r['Genre']||'Unknown').split(',')[0].trim())||'Unknown',
+      wiki:     r['Wiki Page']||'',
+      plot:     r['Generic_Plot']||'',
+      x:        parseFloat(r['x']),
+      y:        parseFloat(r['y']),
+    }));
+
+  // Count — only from actual data
+  allData.forEach(d => originCounts[d.origin]=(originCounts[d.origin]||0)+1);
+  const sortedOrigins = Object.entries(originCounts).sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  sortedOrigins.forEach((o,i) => originColors[o]=PAL[i%PAL.length]);
+
+  // Valid years only
+  const years = allData.filter(d=>d.year&&d.year>1800&&d.year<2100).map(d=>d.year);
+  yearMin=Math.min(...years); yearMax=Math.max(...years);
+
+  // Genre — only real values
+  const genres=[...new Set(allData.map(d=>d.genre))]
+    .filter(g=>g&&g.length<60&&g!=='Unknown').sort();
+
+  const gSel=document.getElementById('genre-filter');
+  genres.forEach(g=>{
+    const o=document.createElement('option');
+    o.value=o.textContent=g; gSel.appendChild(o);
+  });
+
+  const ymEl=document.getElementById('year-min');
+  const yxEl=document.getElementById('year-max');
+  ymEl.min=yxEl.min=yearMin; ymEl.max=yxEl.max=yearMax;
+  ymEl.value=yearMin; yxEl.value=yearMax;
+  document.getElementById('ymin-lbl').textContent=yearMin;
+  document.getElementById('ymax-lbl').textContent=yearMax;
+
+  document.getElementById('s-total').textContent=allData.length.toLocaleString();
+  document.getElementById('s-origins').textContent=sortedOrigins.length;
+  document.getElementById('s-years').textContent=`${yearMin}–${yearMax}`;
+
+  buildChips(sortedOrigins);
+  filteredIdx=allData.map((_,i)=>i);
+  document.getElementById('s-visible').textContent=allData.length.toLocaleString();
+
+  setTimeout(()=>{
+    renderChart();
+    document.getElementById('loading').style.display='none';
+    const app=document.getElementById('app');
+    app.style.display='flex';
+  },60);
+}
+
+// ── Chips ─────────────────────────────────────────────────────
+function buildChips(origins) {
+  const wrap=document.getElementById('chips');
+  wrap.innerHTML='';
+  origins.forEach(o=>{
+    const el=document.createElement('div');
+    el.className='chip'; el.dataset.origin=o;
+    el.innerHTML=`<div class="chip-dot" style="background:${originColors[o]}"></div>
+      <span class="chip-name">${o}</span>
+      <span class="chip-cnt">${originCounts[o].toLocaleString()}</span>`;
+    el.onclick=()=>{
+      const off=el.classList.toggle('off');
+      off?hiddenOrigins.add(o):hiddenOrigins.delete(o);
+      applyFilters();
+    };
+    wrap.appendChild(el);
+  });
+}
+
+function toggleAllOrigins() {
+  allHidden=!allHidden;
+  document.getElementById('tog-all-lbl').textContent=allHidden?'show all':'hide all';
+  document.querySelectorAll('.chip').forEach(el=>{
+    const o=el.dataset.origin;
+    if(allHidden){el.classList.add('off');hiddenOrigins.add(o);}
+    else{el.classList.remove('off');hiddenOrigins.delete(o);}
+  });
+  applyFilters();
+}
+
+// ── Filters ───────────────────────────────────────────────────
+function applyFilters() {
+  const q=document.getElementById('search').value.toLowerCase();
+  const genre=document.getElementById('genre-filter').value;
+  const yMin=parseInt(document.getElementById('year-min').value);
+  const yMax=parseInt(document.getElementById('year-max').value);
+
+  filteredIdx=allData.filter(d=>{
+    if(hiddenOrigins.has(d.origin)) return false;
+    if(genre&&d.genre!==genre) return false;
+    if(d.year&&(d.year<yMin||d.year>yMax)) return false;
+    if(q&&!d.title.toLowerCase().includes(q)&&
+         !d.genre.toLowerCase().includes(q)&&
+         !d.plot.toLowerCase().includes(q)&&
+         !d.origin.toLowerCase().includes(q)) return false;
+    return true;
+  }).map(d=>d.i);
+
+  document.getElementById('s-visible').textContent=filteredIdx.length.toLocaleString();
+  renderChart(); updateList();
+}
+
+function onYearChange() {
+  let mn=parseInt(document.getElementById('year-min').value);
+  let mx=parseInt(document.getElementById('year-max').value);
+  if(mn>mx){mx=mn;document.getElementById('year-max').value=mx;}
+  document.getElementById('ymin-lbl').textContent=mn;
+  document.getElementById('ymax-lbl').textContent=mx;
+  applyFilters();
+}
+
+function resetAll() {
+  document.getElementById('search').value='';
+  document.getElementById('genre-filter').value='';
+  document.getElementById('year-min').value=yearMin;
+  document.getElementById('year-max').value=yearMax;
+  document.getElementById('ymin-lbl').textContent=yearMin;
+  document.getElementById('ymax-lbl').textContent=yearMax;
+  hiddenOrigins.clear(); allHidden=false;
+  document.getElementById('tog-all-lbl').textContent='hide all';
+  document.querySelectorAll('.chip').forEach(el=>el.classList.remove('off'));
+  applyFilters();
+}
+
+// ── Chart ─────────────────────────────────────────────────────
+function renderChart() {
+  const filtered=filteredIdx.map(i=>allData[i]);
+  const byOrigin={};
+  filtered.forEach(d=>(byOrigin[d.origin]=byOrigin[d.origin]||[]).push(d));
+
+  const traces=Object.entries(byOrigin).map(([origin,movies])=>({
+    type:'scattergl', mode:'markers', name:origin,
+    x:movies.map(m=>m.x), y:movies.map(m=>m.y),
+    customdata:movies.map(m=>[
+      m.i,m.title,m.year||'?',m.origin,m.genre,
+      m.director,m.cast,m.plot.substring(0,200),m.wiki
+    ]),
+    marker:{color:originColors[origin]||'#888',size:5,opacity:0.78,line:{width:0}},
+    hovertemplate:
+      '<b>%{customdata[1]}</b><br>'+
+      '%{customdata[2]} · %{customdata[3]}<br>'+
+      '<i>%{customdata[4]}</i><extra></extra>',
+    showlegend:false,
+  }));
+
+  // Compute tight bounds from actual data so chart always fills the space
+  const xs=filtered.map(d=>d.x), ys=filtered.map(d=>d.y);
+  const xMin=Math.min(...xs), xMax=Math.max(...xs);
+  const yMin=Math.min(...ys), yMax=Math.max(...ys);
+  const xPad=(xMax-xMin)*0.05, yPad=(yMax-yMin)*0.05;
+
+  Plotly.react('plotly-chart', traces, {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    margin:{t:4,b:4,l:4,r:4},
+    xaxis:{
+      showgrid:true, gridcolor:'#0e1a28', zeroline:false, showticklabels:false,
+      range:[xMin-xPad, xMax+xPad], fixedrange:false
+    },
+    yaxis:{
+      showgrid:true, gridcolor:'#0e1a28', zeroline:false, showticklabels:false,
+      range:[yMin-yPad, yMax+yPad], fixedrange:false
+    },
+    hovermode:'closest',
+    hoverlabel:{bgcolor:'#0d1219',bordercolor:'#1c2b3a',font:{family:'DM Sans',color:'#c4d4e8',size:13}},
+    dragmode:'pan',
+  },{
+    responsive:true, scrollZoom:true, displayModeBar:true,
+    modeBarButtonsToRemove:['lasso2d','select2d','autoScale2d'],
+    modeBarButtonsToAdd:[{
+      name:'Reset zoom', icon:Plotly.Icons.home,
+      click:()=>{
+        const xs=filteredIdx.map(i=>allData[i].x), ys=filteredIdx.map(i=>allData[i].y);
+        const xMin=Math.min(...xs),xMax=Math.max(...xs),yMin=Math.min(...ys),yMax=Math.max(...ys);
+        const xP=(xMax-xMin)*0.05, yP=(yMax-yMin)*0.05;
+        Plotly.relayout('plotly-chart',{'xaxis.range':[xMin-xP,xMax+xP],'yaxis.range':[yMin-yP,yMax+yP]});
+      }
+    }],
+    displaylogo:false,
+    toImageButtonOptions:{format:'png',filename:'cinema_universe',scale:2}
+  });
+
+  document.getElementById('plotly-chart').on('plotly_click', data=>{
+    const cd=data.points[0].customdata;
+    showDetail(...cd);
+  });
+}
+
+// ── Detail ────────────────────────────────────────────────────
+function showDetail(idx,title,year,origin,genre,director,cast,plot,wiki) {
+  document.getElementById('d-title').textContent=title;
+  const col=originColors[origin]||'#888';
+  document.getElementById('d-tags').innerHTML=
+    `<span class="d-tag" style="color:var(--teal);border-color:var(--teal)">${year}</span>
+     <span class="d-tag" style="color:${col};border-color:${col}">${origin}</span>
+     <span class="d-tag" style="color:#c97de8;border-color:#c97de8">${genre}</span>`;
+  document.getElementById('d-dir').textContent=director||'—';
+  document.getElementById('d-cast').textContent=cast||'—';
+  document.getElementById('d-plot').textContent=plot||'—';
+  const w=document.getElementById('d-wiki');
+  w.style.display=wiki?'inline-flex':'none';
+  if(wiki) w.href=wiki;
+  document.getElementById('detail').classList.add('show');
+}
+function closeDetail(){ document.getElementById('detail').classList.remove('show'); }
+
+// ── List ──────────────────────────────────────────────────────
+function updateList() {
+  const scroll=document.getElementById('lp-scroll');
+  document.getElementById('lp-cnt').textContent=filteredIdx.length.toLocaleString()+' results';
+  const show=filteredIdx.slice(0,250);
+  scroll.innerHTML=show.map(i=>{
+    const d=allData[i]; const col=originColors[d.origin]||'#888';
+    return `<div class="mcard" onclick="cardClick(${i})">
+      <div class="mc-title">${esc(d.title)}<span class="mc-badge" style="background:${col}28;color:${col}">${esc(d.origin)}</span></div>
+      <div class="mc-meta">${d.year||'?'} · ${esc(d.genre)}</div>
+      <div class="mc-plot">${esc(d.plot)}</div>
+    </div>`;
+  }).join('');
+  if(filteredIdx.length>250)
+    scroll.innerHTML+=`<div class="lp-more">Showing 250 of ${filteredIdx.length.toLocaleString()} — refine filters</div>`;
+}
+function cardClick(i){
+  const d=allData[i];
+  showDetail(d.i,d.title,d.year||'?',d.origin,d.genre,d.director,d.cast,d.plot,d.wiki);
+}
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Panel toggles ─────────────────────────────────────────────
+function toggleFP(){
+  const p=document.getElementById('fp');
+  const b=document.getElementById('btn-fp');
+  p.classList.toggle('collapsed');
+  b.classList.toggle('on',!p.classList.contains('collapsed'));
+  setTimeout(()=>Plotly.relayout('plotly-chart',{}),280);
+}
+function toggleLP(){
+  const p=document.getElementById('lp');
+  const b=document.getElementById('btn-lp');
+  p.classList.toggle('collapsed');
+  b.classList.toggle('on',!p.classList.contains('collapsed'));
+  setTimeout(()=>Plotly.relayout('plotly-chart',{}),280);
+}
+</script>
+</body>
+</html>
